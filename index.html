@@ -35,10 +35,11 @@
             border-bottom: 1px solid #ddd;
             padding: 1rem 0;
         }
+
             .event > div {
                 display: flex;
-                flex-direction: column; 
-                align-items: flex-start; 
+                flex-direction: column;
+                align-items: flex-start;
             }
 
             .event:last-child {
@@ -63,9 +64,9 @@
                     cursor: not-allowed;
                 }
 
-        /* MODAL STYLING */
+        /* MODAL */
         .modal {
-            display: none; /* nascosta di default */
+            display: none;
             position: fixed;
             z-index: 1000;
             left: 0;
@@ -73,12 +74,12 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.5); /* sfondo scuro */
+            background-color: rgba(0,0,0,0.5);
         }
 
         .modal-content {
             background-color: #fff;
-            margin: 10% auto; /* centrare verticalmente e orizzontalmente */
+            margin: 10% auto;
             padding: 2rem;
             border-radius: 8px;
             max-width: 400px;
@@ -125,6 +126,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -133,9 +135,7 @@
 
     <div class="container">
 
-        <div id="event-list">
-            <!-- Eventi generati da JS -->
-        </div>
+        <div id="event-list"></div>
 
         <!-- MODAL -->
         <div id="modal" class="modal">
@@ -157,19 +157,29 @@
         <div id="confirmation" class="status"></div>
 
     </div>
-
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
-        const events = [
-            { id: 1, title: "Laboratorio di Robotica", maxSeats: 5, remaining: 5 },
-            { id: 2, title: "Giornata dello Sport", maxSeats: 3, remaining: 3 },
-            { id: 3, title: "Altro evento non definito, ma comunque molto bello, il problema è che il titolo è infinito magari ba accorciato un po'", maxSeats: 4, remaining: 4 },
-        ];
+        const supabaseUrl = 'https://oshlsztqzlxikdrmhkde.supabase.co';
+        const supabaseKey = 'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4';
 
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let events = [];
         const eventList = document.getElementById('event-list');
         const modal = document.getElementById('modal');
         const form = document.getElementById('registration-form');
         const confirmation = document.getElementById('confirmation');
         let selectedEvent = null;
+
+        async function loadEvents() {
+            const { data, error } = await supabaseClient.from('events').select('*');
+            console.log("DATA DAL DB:", data);
+            console.log("ERROR DAL DB:", error);
+
+            if (error) { console.error(error); return; }
+            events = data.map(e => ({ ...e, remaining: e.remaining ?? e.max_seats }));
+            renderEvents();
+        }
 
         function renderEvents() {
             eventList.innerHTML = '';
@@ -177,12 +187,12 @@
                 const div = document.createElement('div');
                 div.className = 'event';
                 div.innerHTML = `
-                <div>
-                  <h3>${e.title}</h3>
-                  <div class="status">Posti rimanenti: ${e.remaining}</div>
-                </div>
-                <button ${e.remaining === 0 ? 'disabled' : ''} onclick="openModal(${e.id})">Iscriviti</button>
-              `;
+                    <div>
+                        <h3>${e.title}</h3>
+                        <div class="status">Posti rimanenti: ${e.remaining}</div>
+                    </div>
+                    <button ${e.remaining === 0 ? 'disabled' : ''} onclick="openModal(${e.id})">Iscriviti</button>
+                    `;
                 eventList.appendChild(div);
             });
         }
@@ -198,26 +208,52 @@
             form.reset();
         }
 
-        // chiusura modal cliccando fuori
         window.onclick = function (event) {
-            if (event.target == modal) {
-                closeModal();
-            }
+            if (event.target == modal) closeModal();
         }
 
-        form.addEventListener('submit', (e) => {
+
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const nome = document.getElementById('nome').value;
+            const cognome = document.getElementById('cognome').value;
+            const classe = document.getElementById('classe').value;
+
             if (selectedEvent.remaining > 0) {
+                // Inserisci user
+                const { data: user, error: userError } = await supabaseClient
+                    .from('users')
+                    .insert([{ nome, cognome, classe }])
+                    .select()
+                    .single();
+                if (userError) { console.error(userError); return; }
+
+                // Registrazione evento
+                const { data: reg, error: regError } = await supabaseClient
+                    .from('registrations')
+                    .insert([{ user_id: user.id, event_id: selectedEvent.id }]);
+                if (regError) { console.error(regError); return; }
+
+                // Decrementa posti rimanenti nel DB
+                const { error: updateError } = await supabaseClient
+                    .from('events')
+                    .update({ remaining: selectedEvent.remaining - 1 })
+                    .eq('id', selectedEvent.id);
+                if (updateError) console.error(updateError);
+
                 selectedEvent.remaining -= 1;
                 renderEvents();
                 confirmation.textContent = `Iscrizione confermata a "${selectedEvent.title}"!`;
                 closeModal();
+
             } else {
                 confirmation.textContent = `Mi dispiace, nessun posto disponibile per "${selectedEvent.title}"`;
                 closeModal();
             }
         });
-        renderEvents();
+
+        loadEvents();
     </script>
+
 </body>
 </html>
