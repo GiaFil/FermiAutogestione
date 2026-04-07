@@ -213,7 +213,10 @@
                 else groupedByDate[e.date].secondo.push(e);
             });
 
-            for (const date in groupedByDate) {
+            // Ottieni le date ordinate
+            const orderedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a) - new Date(b));
+
+            orderedDates.forEach(date => {
                 const dateSection = document.createElement('div');
                 dateSection.innerHTML = `<h2>${formatDate(date)}</h2>`;
 
@@ -240,7 +243,7 @@
                 }
 
                 eventList.appendChild(dateSection);
-            }
+            });
         }
 
         function createEventElement(e) {
