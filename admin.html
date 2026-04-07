@@ -65,37 +65,39 @@
     <script>
         const supabaseUrl = 'https://oshlsztqzlxikdrmhkde.supabase.co';
         const supabaseKey = 'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         const loginForm = document.getElementById('login-form');
         const adminContent = document.getElementById('admin-content');
         const status = document.getElementById('status');
 
+        // Login
         async function login() {
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
             if (error) {
                 status.textContent = error.message;
                 return;
             }
 
-            // Mostra contenuto admin e nascondi login
+            // Tutti gli utenti registrati sono considerati admin
             loginForm.style.display = 'none';
             adminContent.style.display = 'block';
         }
 
+        // Logout
         async function logout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             loginForm.style.display = 'block';
             adminContent.style.display = 'none';
         }
 
-        // Controllo se già loggato
-        supabase.auth.getSession().then(({ data }) => {
-            if (data.session) {
+        // Controllo sessione già loggato
+        supabaseClient.auth.getSession().then(({ data }) => {
+            if (data.session?.user) {
                 loginForm.style.display = 'none';
                 adminContent.style.display = 'block';
             }
