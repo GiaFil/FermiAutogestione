@@ -1,172 +1,218 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Iscrizione Eventi</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
-    margin: 0;
-    padding: 0;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autogestione Fermi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
 
-  header {
-    background-color: #4CAF50;
-    color: white;
-    text-align: center;
-    padding: 1rem;
-  }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+        }
 
-  .container {
-    max-width: 800px;
-    margin: 2rem auto;
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
 
-  .event {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #ddd;
-    padding: 1rem 0;
-  }
+        .event {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding: 1rem 0;
+        }
 
-  .event:last-child {
-    border-bottom: none;
-  }
+            .event:last-child {
+                border-bottom: none;
+            }
 
-  .event h3 {
-    margin: 0;
-  }
+            .event h3 {
+                margin: 0;
+            }
 
-  .event button {
-    padding: 0.5rem 1rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
+            .event button {
+                padding: 0.5rem 1rem;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
 
-  .event button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
+                .event button:disabled {
+                    background-color: #ccc;
+                    cursor: not-allowed;
+                }
 
-  form {
-    margin-top: 2rem;
-    display: flex;
-    flex-direction: column;
-  }
+        /* MODAL STYLING */
+        .modal {
+            display: none; /* nascosta di default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5); /* sfondo scuro */
+        }
 
-  form label {
-    margin: 0.5rem 0 0.2rem;
-  }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto; /* centrare verticalmente e orizzontalmente */
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 400px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            position: relative;
+        }
 
-  form input {
-    padding: 0.5rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
+        .close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-  form button {
-    padding: 0.7rem;
-    background-color: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
+        form label {
+            margin: 0.5rem 0 0.2rem;
+            display: block;
+        }
 
-  .status {
-    margin-top: 0.5rem;
-    font-weight: bold;
-  }
-</style>
+        form input {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        form button {
+            padding: 0.7rem;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .status {
+            margin-top: 0.5rem;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
 
-<header>
-  <h1>Iscrizione Eventi</h1>
-</header>
+    <header>
+        <h1>Autogestione Fermi</h1>
+    </header>
 
-<div class="container">
+    <div class="container">
 
-  <div id="event-list">
-    <!-- Eventi generati da JS -->
-  </div>
-
-  <form id="registration-form" style="display:none;">
-    <h3>Compila i tuoi dati</h3>
-    <label for="nome">Nome</label>
-    <input type="text" id="nome" required>
-    <label for="cognome">Cognome</label>
-    <input type="text" id="cognome" required>
-    <label for="classe">Classe</label>
-    <input type="text" id="classe" required>
-    <button type="submit">Iscriviti</button>
-  </form>
-
-  <div id="confirmation" style="margin-top:1rem; font-weight:bold;"></div>
-
-</div>
-
-<script>
-  // Simuliamo una lista di eventi
-  const events = [
-    { id: 1, title: "Laboratorio di Robotica", maxSeats: 5, remaining: 5 },
-    { id: 2, title: "Giornata dello Sport", maxSeats: 3, remaining: 3 },
-    { id: 3, title: "Workshop di Coding", maxSeats: 4, remaining: 4 },
-  ];
-
-  const eventList = document.getElementById('event-list');
-  const form = document.getElementById('registration-form');
-  const confirmation = document.getElementById('confirmation');
-  let selectedEvent = null;
-
-  function renderEvents() {
-    eventList.innerHTML = '';
-    events.forEach(e => {
-      const div = document.createElement('div');
-      div.className = 'event';
-      div.innerHTML = `
-        <div>
-          <h3>${e.title}</h3>
-          <div class="status">Posti rimanenti: ${e.remaining}</div>
+        <div id="event-list">
+            <!-- Eventi generati da JS -->
         </div>
-        <button ${e.remaining === 0 ? 'disabled' : ''} onclick="selectEvent(${e.id})">Iscriviti</button>
-      `;
-      eventList.appendChild(div);
-    });
-  }
 
-  function selectEvent(id) {
-    selectedEvent = events.find(e => e.id === id);
-    form.style.display = 'block';
-    confirmation.textContent = '';
-  }
+        <!-- MODAL -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h3>Compila i tuoi dati</h3>
+                <form id="registration-form">
+                    <label for="nome">Nome</label>
+                    <input type="text" id="nome" required>
+                    <label for="cognome">Cognome</label>
+                    <input type="text" id="cognome" required>
+                    <label for="classe">Classe</label>
+                    <input type="text" id="classe" required>
+                    <button type="submit">Iscriviti</button>
+                </form>
+            </div>
+        </div>
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (selectedEvent.remaining > 0) {
-      selectedEvent.remaining -= 1;
-      renderEvents();
-      confirmation.textContent = `Iscrizione confermata a "${selectedEvent.title}"!`;
-      form.reset();
-      form.style.display = 'none';
-    } else {
-      confirmation.textContent = `Mi dispiace, nessun posto disponibile per "${selectedEvent.title}"`;
-    }
-  });
+        <div id="confirmation" class="status"></div>
 
-  renderEvents();
-</script>
+    </div>
 
+    <script>
+        const events = [
+            { id: 1, title: "Laboratorio di Robotica", maxSeats: 5, remaining: 5 },
+            { id: 2, title: "Giornata dello Sport", maxSeats: 3, remaining: 3 },
+            { id: 3, title: "Workshop di Coding", maxSeats: 4, remaining: 4 },
+        ];
+
+        const eventList = document.getElementById('event-list');
+        const modal = document.getElementById('modal');
+        const form = document.getElementById('registration-form');
+        const confirmation = document.getElementById('confirmation');
+        let selectedEvent = null;
+
+        function renderEvents() {
+            eventList.innerHTML = '';
+            events.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'event';
+                div.innerHTML = `
+            <div>
+              <h3>${e.title}</h3>
+              <div class="status">Posti rimanenti: ${e.remaining}</div>
+            </div>
+            <button ${e.remaining === 0 ? 'disabled' : ''} onclick="openModal(${e.id})">Iscriviti</button>
+          `;
+                eventList.appendChild(div);
+            });
+        }
+
+        function openModal(id) {
+            selectedEvent = events.find(e => e.id === id);
+            modal.style.display = 'block';
+            confirmation.textContent = '';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+            form.reset();
+        }
+
+        // chiusura modal cliccando fuori
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (selectedEvent.remaining > 0) {
+                selectedEvent.remaining -= 1;
+                renderEvents();
+                confirmation.textContent = `Iscrizione confermata a "${selectedEvent.title}"!`;
+                closeModal();
+            } else {
+                confirmation.textContent = `Mi dispiace, nessun posto disponibile per "${selectedEvent.title}"`;
+                closeModal();
+            }
+        });
+        renderEvents();
+    </script>
 </body>
 </html>
