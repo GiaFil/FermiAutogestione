@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Autogestione Fermi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f2f2f2;
+        }
+
+        #login-form, #admin-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 0.7rem;
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .status {
+            margin-top: 1rem;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-form">
+        <h2>Login Admin</h2>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button onclick="login()">Accedi</button>
+        <div id="status" class="status"></div>
+    </div>
+
+    <div id="admin-content" style="display:none;">
+        <h2>Benvenuto Admin</h2>
+        <p>Qui puoi gestire eventi e iscrizioni.</p>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'https://oshlsztqzlxikdrmhkde.supabase.co';
+        const supabaseKey = 'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        const loginForm = document.getElementById('login-form');
+        const adminContent = document.getElementById('admin-content');
+        const status = document.getElementById('status');
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                status.textContent = error.message;
+                return;
+            }
+
+            // Mostra contenuto admin e nascondi login
+            loginForm.style.display = 'none';
+            adminContent.style.display = 'block';
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            loginForm.style.display = 'block';
+            adminContent.style.display = 'none';
+        }
+
+        // Controllo se già loggato
+        supabase.auth.getSession().then(({ data }) => {
+            if (data.session) {
+                loginForm.style.display = 'none';
+                adminContent.style.display = 'block';
+            }
+        });
+    </script>
+
+</body>
+</html>
