@@ -28,6 +28,12 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
+        h2 {
+            margin-top: 2rem;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 0.5rem;
+        }
+
         .event {
             display: flex;
             justify-content: space-between;
@@ -50,6 +56,11 @@
                 margin: 0;
             }
 
+            .event p {
+                margin: 0.3rem 0;
+                color: #555;
+            }
+
             .event button {
                 padding: 0.5rem 1rem;
                 background-color: #4CAF50;
@@ -64,7 +75,6 @@
                     cursor: not-allowed;
                 }
 
-        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -73,7 +83,6 @@
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
             background-color: rgba(0,0,0,0.5);
         }
 
@@ -83,8 +92,8 @@
             padding: 2rem;
             border-radius: 8px;
             max-width: 400px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
             position: relative;
+            z-index: 1001; /* IMPORTANTE: superiore all'overlay */
         }
 
         .close {
@@ -92,7 +101,6 @@
             right: 1rem;
             top: 1rem;
             font-size: 1.5rem;
-            font-weight: bold;
             cursor: pointer;
         }
 
@@ -105,8 +113,6 @@
             width: 100%;
             padding: 0.5rem;
             margin-bottom: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
         }
 
         form button {
@@ -115,8 +121,8 @@
             color: white;
             border: none;
             border-radius: 4px;
-            cursor: pointer;
             width: 100%;
+            cursor: pointer;
         }
 
         .status {
@@ -124,9 +130,28 @@
             font-weight: bold;
             text-align: center;
         }
+
+        .turn-section {
+            margin-left: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 6px;
+        }
+
+        .turn-primo {
+            background-color: #e8f5e9;
+        }
+
+        .turn-secondo {
+            background-color: #e3f2fd;
+        }
+
+        .turn-title {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
     </style>
 </head>
-
 <body>
 
     <header>
@@ -137,31 +162,31 @@
 
         <div id="event-list"></div>
 
-        <!-- MODAL -->
         <div id="modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal()">&times;</span>
                 <h3>Compila i tuoi dati</h3>
                 <form id="registration-form">
-                    <label for="nome">Nome</label>
+                    <label>Nome</label>
                     <input type="text" id="nome" required>
-                    <label for="cognome">Cognome</label>
+                    <label>Cognome</label>
                     <input type="text" id="cognome" required>
-                    <label for="classe">Classe</label>
+                    <label>Classe</label>
                     <input type="text" id="classe" required>
                     <button type="submit">Iscriviti</button>
                 </form>
+                <div id="modal-status" class="status"></div> <!-- qui mostri gli errori -->
             </div>
         </div>
 
         <div id="confirmation" class="status"></div>
 
     </div>
+
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
         const supabaseUrl = 'https://oshlsztqzlxikdrmhkde.supabase.co';
         const supabaseKey = 'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4';
-
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let events = [];
@@ -173,9 +198,6 @@
 
         async function loadEvents() {
             const { data, error } = await supabaseClient.from('events').select('*');
-            console.log("DATA DAL DB:", data);
-            console.log("ERROR DAL DB:", error);
-
             if (error) { console.error(error); return; }
             events = data.map(e => ({ ...e, remaining: e.remaining ?? e.max_seats }));
             renderEvents();
@@ -183,18 +205,62 @@
 
         function renderEvents() {
             eventList.innerHTML = '';
+            const groupedByDate = {};
+
             events.forEach(e => {
-                const div = document.createElement('div');
-                div.className = 'event';
-                div.innerHTML = `
-                    <div>
-                        <h3>${e.title}</h3>
-                        <div class="status">Posti rimanenti: ${e.remaining}</div>
-                    </div>
-                    <button ${e.remaining === 0 ? 'disabled' : ''} onclick="openModal(${e.id})">Iscriviti</button>
-                    `;
-                eventList.appendChild(div);
+                if (!groupedByDate[e.date]) groupedByDate[e.date] = { primo: [], secondo: [] };
+                if (e.turn === 'primo') groupedByDate[e.date].primo.push(e);
+                else groupedByDate[e.date].secondo.push(e);
             });
+
+            for (const date in groupedByDate) {
+                const dateSection = document.createElement('div');
+                dateSection.innerHTML = `<h2>${formatDate(date)}</h2>`;
+
+                if (groupedByDate[date].primo.length > 0) {
+                    const primoSection = document.createElement('div');
+                    primoSection.className = 'turn-section turn-primo';
+                    const primoTitle = document.createElement('h3');
+                    primoTitle.className = 'turn-title';
+                    primoTitle.textContent = 'Primo turno';
+                    primoSection.appendChild(primoTitle);
+                    groupedByDate[date].primo.forEach(e => primoSection.appendChild(createEventElement(e)));
+                    dateSection.appendChild(primoSection);
+                }
+
+                if (groupedByDate[date].secondo.length > 0) {
+                    const secondoSection = document.createElement('div');
+                    secondoSection.className = 'turn-section turn-secondo';
+                    const secondoTitle = document.createElement('h3');
+                    secondoTitle.className = 'turn-title';
+                    secondoTitle.textContent = 'Secondo turno';
+                    secondoSection.appendChild(secondoTitle);
+                    groupedByDate[date].secondo.forEach(e => secondoSection.appendChild(createEventElement(e)));
+                    dateSection.appendChild(secondoSection);
+                }
+
+                eventList.appendChild(dateSection);
+            }
+        }
+
+        function createEventElement(e) {
+            const div = document.createElement('div');
+            div.className = 'event';
+            div.innerHTML = `
+            <div>
+                <h3>${e.title}</h3>
+                <p>${e.description || ''}</p>
+                <div class="status">Posti rimanenti: ${e.remaining}</div>
+            </div>
+            <button ${e.remaining === 0 ? 'disabled' : ''} onclick="openModal(${e.id})">Iscriviti</button>
+        `;
+            return div;
+        }
+
+        function formatDate(date) {
+            const mesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+            const d = new Date(date);
+            return `${d.getDate()} ${mesi[d.getMonth()]}`;
         }
 
         function openModal(id) {
@@ -209,46 +275,64 @@
         }
 
         window.onclick = function (event) {
-            if (event.target == modal) closeModal();
+            if (event.target === modal) closeModal();
         }
-
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const nome = document.getElementById('nome').value;
             const cognome = document.getElementById('cognome').value;
             const classe = document.getElementById('classe').value;
 
+            const modalStatus = document.getElementById('modal-status');
+            modalStatus.textContent = ''; // reset messaggio
+
             if (selectedEvent.remaining > 0) {
-                // Inserisci user
+                // Inserimento utente
                 const { data: user, error: userError } = await supabaseClient
                     .from('users')
                     .insert([{ nome, cognome, classe }])
-                    .select()
+                    .select('id')
                     .single();
-                if (userError) { console.error(userError); return; }
 
-                // Registrazione evento
-                const { data: reg, error: regError } = await supabaseClient
+                if (userError) {
+                    console.error('Errore inserimento utente:', userError);
+                    modalStatus.textContent = 'Errore nella registrazione. Riprova.';
+                    return;
+                }
+
+                // Inserimento registrazione
+                const { error: regError } = await supabaseClient
                     .from('registrations')
                     .insert([{ user_id: user.id, event_id: selectedEvent.id }]);
-                if (regError) { console.error(regError); return; }
 
-                // Decrementa posti rimanenti nel DB
+                if (regError) {
+                    console.error('Errore registrazione evento:', regError);
+                    modalStatus.textContent = 'Errore nella registrazione. Riprova.';
+                    return;
+                }
+
+                // Aggiornamento posti
                 const { error: updateError } = await supabaseClient
                     .from('events')
                     .update({ remaining: selectedEvent.remaining - 1 })
                     .eq('id', selectedEvent.id);
-                if (updateError) console.error(updateError);
 
+                if (updateError) {
+                    console.error('Errore aggiornamento posti:', updateError);
+                    modalStatus.textContent = 'Errore nella registrazione. Riprova.';
+                    return;
+                }
+
+                // Tutto ok
                 selectedEvent.remaining -= 1;
                 renderEvents();
-                confirmation.textContent = `Iscrizione confermata a "${selectedEvent.title}"!`;
-                closeModal();
-
+                modalStatus.textContent = `Iscrizione confermata a "${selectedEvent.title}"!`;
+                // chiudi automaticamente se vuoi, o lascia aperto
+                setTimeout(closeModal, 1500);
             } else {
-                confirmation.textContent = `Mi dispiace, nessun posto disponibile per "${selectedEvent.title}"`;
-                closeModal();
+                modalStatus.textContent = `Posti esauriti per "${selectedEvent.title}"`;
             }
         });
 
