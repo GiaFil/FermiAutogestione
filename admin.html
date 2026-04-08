@@ -4,104 +4,378 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Autogestione Fermi</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             background: #f2f2f2;
+            margin: 0;
         }
 
         #login-form, #admin-content {
             background: white;
             padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            width: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            width: 80%;
+            max-width: 900px;
+            margin: 2rem auto;
             text-align: center;
         }
 
-        input {
+        input, select, textarea, button {
             width: 100%;
-            padding: 0.5rem;
+            padding: 0.6rem;
             margin-bottom: 1rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
         }
 
         button {
-            padding: 0.7rem;
-            width: 100%;
             background-color: #4CAF50;
             color: white;
-            border: none;
-            border-radius: 4px;
             cursor: pointer;
+            border: none;
         }
 
-        .status {
-            margin-top: 1rem;
-            color: red;
+            button:hover {
+                background-color: #45a049;
+            }
+
+        /* EVENT CARD */
+        .event-item {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            text-align: left;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+            .event-actions button {
+                flex: 1;
+            }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: auto;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        /* TABELLA */
+        .registrations-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+            .registrations-table th {
+                background: #4CAF50;
+                color: white;
+                padding: 8px;
+            }
+
+            .registrations-table td {
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+
+            .registrations-table tr:hover {
+                background: #f9f9f9;
+            }
+
+        .delete-btn {
+            background: #f44336;
+            font-size: 12px;
+            padding: 5px 8px;
         }
     </style>
 </head>
+
 <body>
 
     <div id="login-form">
         <h2>Login Admin</h2>
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Password" required>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
         <button onclick="login()">Accedi</button>
-        <div id="status" class="status"></div>
+        <div id="status"></div>
     </div>
 
     <div id="admin-content" style="display:none;">
-        <h2>Benvenuto Admin</h2>
-        <p>Qui puoi gestire eventi e iscrizioni.</p>
+        <h2>Admin</h2>
         <button onclick="logout()">Logout</button>
+        <button onclick="showAddEventForm()">Aggiungi Corso</button>
+
+        <h3>Corsi</h3>
+        <div id="events-list"></div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="event-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="hideEventForm()">&times;</span>
+
+            <h3 id="form-title">CorsoTitolo</h3>
+
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <input type="text" id="event-title" placeholder="Titolo evento" required>
+                <input type="number" id="event-max-seats" placeholder="Posti" required>
+                <textarea id="event-description"></textarea>
+
+                <select id="event-date">
+                    <option value="2026-04-29">29 Aprile</option>
+                    <option value="2026-04-30">30 Aprile</option>
+                </select>
+
+                <select id="event-turn">
+                    <option value="primo">Primo turno</option>
+                    <option value="secondo">Secondo turno</option>
+                </select>
+
+                <button type="submit">Salva</button>
+            </form>
+        </div>
     </div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
     <script>
-        const supabaseUrl = 'https://oshlsztqzlxikdrmhkde.supabase.co';
-        const supabaseKey = 'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4';
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseClient = supabase.createClient(
+            'https://oshlsztqzlxikdrmhkde.supabase.co',
+            'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4'
+        );
 
-        const loginForm = document.getElementById('login-form');
-        const adminContent = document.getElementById('admin-content');
-        const status = document.getElementById('status');
+        const eventModal = document.getElementById('event-modal');
 
-        // Login
         async function login() {
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
             if (error) {
-                status.textContent = error.message;
+                document.getElementById('status').textContent = error.message;
                 return;
             }
 
-            // Tutti gli utenti registrati sono considerati admin
-            loginForm.style.display = 'none';
-            adminContent.style.display = 'block';
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('admin-content').style.display = 'block';
+            loadEvents();
         }
 
-        // Logout
         async function logout() {
             await supabaseClient.auth.signOut();
-            loginForm.style.display = 'block';
-            adminContent.style.display = 'none';
+            location.reload();
         }
 
-        // Controllo sessione già loggato
+        function showAddEventForm() {
+            document.getElementById('event-form').reset();
+            document.getElementById('event-id').value = '';
+            eventModal.style.display = 'block';
+        }
+
+        function showEditEventForm(event) {
+            document.getElementById('event-id').value = event.id;
+            document.getElementById('event-title').value = event.title;
+            document.getElementById('event-max-seats').value = event.max_seats;
+            document.getElementById('event-description').value = event.description;
+            document.getElementById('event-date').value = event.date;
+            document.getElementById('event-turn').value = event.turn;
+            eventModal.style.display = 'block';
+        }
+
+        function hideEventForm() {
+            eventModal.style.display = 'none';
+        }
+
+        window.onclick = (e) => {
+            if (e.target === eventModal) hideEventForm();
+        };
+
+        async function loadEvents() {
+            const { data } = await supabaseClient.from('events').select('*');
+
+            const container = document.getElementById('events-list');
+            container.innerHTML = '';
+
+            data.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'event-item';
+
+                div.innerHTML = `
+                <strong>${e.title}</strong><br>
+                ${e.date} - ${e.turn}<br>
+                ${e.remaining}/${e.max_seats} posti
+
+                <div class="event-actions">
+                    <button onclick='showEditEventForm(${JSON.stringify(e)})'>Modifica</button>
+                    <button onclick='deleteEvent(${e.id})'>Elimina</button>
+                    <button onclick='toggleRegistrations(${e.id})'>Iscritti</button>
+                    <button onclick='downloadRegistrations(${e.id}, "${e.title}")'>Scarica</button>
+                </div>
+
+                <div id="registrations-${e.id}"></div>
+            `;
+
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('event-form').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('event-id').value;
+
+            const data = {
+                title: document.getElementById('event-title').value,
+                max_seats: parseInt(document.getElementById('event-max-seats').value),
+                remaining: parseInt(document.getElementById('event-max-seats').value),
+                description: document.getElementById('event-description').value,
+                date: document.getElementById('event-date').value,
+                turn: document.getElementById('event-turn').value
+            };
+
+            if (id) {
+                await supabaseClient.from('events').update(data).eq('id', id);
+            } else {
+                await supabaseClient.from('events').insert([data]);
+            }
+
+            hideEventForm();
+            loadEvents();
+        };
+
+        async function deleteEvent(id) {
+            await supabaseClient.from('events').delete().eq('id', id);
+            loadEvents();
+        }
+
+        async function toggleRegistrations(id) {
+            const el = document.getElementById(`registrations-${id}`);
+
+            if (el.innerHTML) {
+                el.innerHTML = '';
+                return;
+            }
+
+            const { data } = await supabaseClient
+                .from('registrations')
+                .select('id, users(nome,cognome,classe)')
+                .eq('event_id', id);
+
+            if (!data.length) {
+                el.innerHTML = '<em>Nessuna iscrizione</em>';
+                return;
+            }
+
+            let html = `
+            <table class="registrations-table">
+                <tr>
+                    <th>Nome</th>
+                    <th>Cognome</th>
+                    <th>Classe</th>
+                    <th>Azioni</th>
+                </tr>
+        `;
+
+            data.forEach(r => {
+                html += `
+                <tr>
+                    <td>${r.users.nome}</td>
+                    <td>${r.users.cognome}</td>
+                    <td>${r.users.classe}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteRegistration(${r.id}, ${id})">
+                            Elimina
+                        </button>
+                    </td>
+                </tr>
+            `;
+            });
+
+            html += `</table>`;
+            el.innerHTML = html;
+        }
+
+        async function deleteRegistration(regId, eventId) {
+            if (!confirm("Eliminare iscrizione?")) return;
+
+            await supabaseClient.from('registrations').delete().eq('id', regId);
+
+            toggleRegistrations(eventId);
+        }
+
         supabaseClient.auth.getSession().then(({ data }) => {
-            if (data.session?.user) {
-                loginForm.style.display = 'none';
-                adminContent.style.display = 'block';
+            if (data.session) {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+                loadEvents();
             }
         });
+
+        async function downloadRegistrations(eventId, eventTitle) {
+            const { data, error } = await supabaseClient
+                .from('registrations')
+                .select('users(nome,cognome,classe)')
+                .eq('event_id', eventId);
+
+            if (error) {
+                alert(error.message);
+                return;
+            }
+
+            if (!data.length) {
+                alert("Nessuna iscrizione");
+                return;
+            }
+
+            const sep = "sep=;\n";
+            let csv = sep + "Nome;Cognome;Classe\n";
+
+            data.forEach(r => {
+                csv += `${r.users.nome};${r.users.cognome};${r.users.classe}\n`;
+            });
+
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${eventTitle}.csv`;
+            link.click();
+        }
+
     </script>
 
 </body>
