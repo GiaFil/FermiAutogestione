@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autogestione Fermi</title>
-
     <style>
         body {
             font-family: Arial;
@@ -66,7 +65,6 @@
             margin-top: 10px;
         }
 
-        /* MODAL MODERNO */
         .modal {
             display: none;
             position: fixed;
@@ -101,8 +99,7 @@
             gap: 12px;
         }
 
-            #registration-form input,
-            #registration-form select {
+            #registration-form input, #registration-form select {
                 padding: 10px;
                 border-radius: 6px;
                 border: 1px solid #ccc;
@@ -110,8 +107,7 @@
                 transition: 0.2s;
             }
 
-                #registration-form input:focus,
-                #registration-form select:focus {
+                #registration-form input:focus, #registration-form select:focus {
                     border-color: #4CAF50;
                     outline: none;
                     box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
@@ -155,23 +151,20 @@
         }
     </style>
 </head>
-
 <body>
 
     <header><h1>Autogestione Fermi</h1></header>
-
     <div class="container">
         <div id="event-list"></div>
 
+        <!-- Modal Registrazione -->
         <div id="modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal()">&times;</span>
                 <h3 id="modal-title">Inserisci dati</h3>
-
                 <form id="registration-form">
                     <input id="nome" placeholder="Nome" required>
                     <input id="cognome" placeholder="Cognome" required>
-
                     <select id="classe" required>
                         <option value="">Seleziona classe</option>
                         <option>1A</option>
@@ -185,119 +178,103 @@
                         <option>5A</option>
                         <option>5B</option>
                     </select>
-
                     <button type="submit" disabled>Iscriviti</button>
                 </form>
-
                 <div id="modal-status" class="status"></div>
+            </div>
+        </div>
+
+        <!-- Modal Conferma Sostituzione -->
+        <div id="confirm-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeConfirmModal()">&times;</span>
+                <h3>Conferma sostituzione</h3>
+                <p id="confirm-text">Sei già iscritto in questo turno, sostituire iscrizione a TITOLO.VECCHIO con TITOLO.NUOVO?</p>
+                <div style="text-align:center; margin-top:1rem;">
+                    <button onclick="replaceRegistration(false)">NO</button>
+                    <button onclick="replaceRegistration(true)">SI</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
     <script>
         const supabaseClient = window.supabase.createClient(
             'https://oshlsztqzlxikdrmhkde.supabase.co',
             'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4'
         );
 
-        let events = [];
-        let selectedEvent = null;
+        let events = [], selectedEvent = null, pendingRegistration = null;
 
         const modal = document.getElementById('modal');
+        const confirmModal = document.getElementById('confirm-modal');
         const form = document.getElementById('registration-form');
         const statusBox = document.getElementById('modal-status');
 
         const inputs = form.querySelectorAll('input, select');
         const submitBtn = form.querySelector('button');
 
-        inputs.forEach(i => {
-            i.addEventListener('input', checkForm);
-        });
-
-        function checkForm() {
-            const allFilled = [...inputs].every(i => i.value.trim() !== '');
-            submitBtn.disabled = !allFilled;
-        }
+        inputs.forEach(i => i.addEventListener('input', checkForm));
+        function checkForm() { submitBtn.disabled = ![...inputs].every(i => i.value.trim() !== ''); }
 
         async function loadEvents() {
-            const { data } = await supabaseClient
-                .from('events')
-                .select('*')
-                .order('date');
-
-            events = data;
+            const { data } = await supabaseClient.from('events').select('*').order('date');
+            events = data || [];
             renderEvents();
         }
 
         function renderEvents() {
             const container = document.getElementById('event-list');
             container.innerHTML = '';
-
             const grouped = {};
-
-            events.forEach(e => {
-                if (!grouped[e.date]) grouped[e.date] = { primo: [], secondo: [] };
-                grouped[e.date][e.turn].push(e);
-            });
+            events.forEach(e => { if (!grouped[e.date]) grouped[e.date] = { primo: [], secondo: [] }; grouped[e.date][e.turn].push(e); });
 
             Object.keys(grouped).forEach(date => {
                 const div = document.createElement('div');
-                const formattedDate = new Date(date).toLocaleDateString('it-IT', {
-                    day: 'numeric',
-                    month: 'long'
-                });
-
+                const formattedDate = new Date(date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
                 div.innerHTML = `<h2>${formattedDate}</h2>`;
-
                 ['primo', 'secondo'].forEach(turn => {
                     if (grouped[date][turn].length) {
                         const sec = document.createElement('div');
                         sec.className = 'turn-section ' + (turn === 'primo' ? 'turn-primo' : 'turn-secondo');
                         sec.innerHTML = `<h3>${turn} turno</h3>`;
-
                         grouped[date][turn].forEach(e => {
                             const el = document.createElement('div');
                             el.className = 'event';
-                            el.innerHTML = `
-                                <div>
-                                    <strong>${e.title}</strong><br>
-                                    <small>${e.description || ''}</small><br>
-                                    <small style="color:${e.remaining > 0 ? 'green' : 'red'}">
-                                        Posti rimasti: ${e.remaining}
-                                    </small>
-                                </div>
-                                <button
-                                    onclick="openModal(${e.id})" 
-                                    ${e.remaining <= 0 ? 'disabled' : ''}>
-                                    ${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}
-                                </button>`;
+                            el.innerHTML = `<div>
+                            <strong>${e.title}</strong><br>
+                            <small>${e.description || ''}</small><br>
+                            <small style="color:${e.remaining > 0 ? 'green' : 'red'}">Posti rimasti: ${e.remaining}</small>
+                        </div>
+                        <button onclick="openModal(${e.id})" ${e.remaining <= 0 ? 'disabled' : ''}>${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}</button>`;
                             sec.appendChild(el);
                         });
-
                         div.appendChild(sec);
                     }
                 });
-
                 container.appendChild(div);
             });
         }
 
         function openModal(id) {
             selectedEvent = events.find(e => e.id === id);
-            const title = document.getElementById('modal-title');
-            title.textContent = `${selectedEvent.title} - ${selectedEvent.turn} turno`;
+            document.getElementById('modal-title').textContent = `${selectedEvent.title} - ${selectedEvent.turn} turno`;
             statusBox.textContent = '';
             modal.style.display = 'block';
         }
+        function closeModal() { modal.style.display = 'none'; }
 
-        function closeModal() {
-            modal.style.display = 'none';
+        function openConfirmModal(oldTitle, newTitle, registration) {
+            document.getElementById('confirm-text').textContent = `Sei già iscritto in questo turno, sostituire iscrizione a ${oldTitle} con ${newTitle}?`;
+            pendingRegistration = registration;
+            confirmModal.style.display = 'block';
         }
+        function closeConfirmModal() { confirmModal.style.display = 'none'; pendingRegistration = null; }
 
         window.onclick = function (event) {
             if (event.target == modal) closeModal();
+            if (event.target == confirmModal) closeConfirmModal();
         }
 
         window.openModal = openModal;
@@ -310,59 +287,73 @@
             const cognome = document.getElementById('cognome').value.trim().toLowerCase();
             const classe = document.getElementById('classe').value.trim().toLowerCase();
 
-            let { data: u } = await supabaseClient
-                .from('users')
-                .select('*')
-                .eq('nome', nome)
-                .eq('cognome', cognome)
-                .eq('classe', classe)
+            let { data: u } = await supabaseClient.from('users').select('*').eq('nome', nome).eq('cognome', cognome).eq('classe', classe).maybeSingle();
+            let userId = u ? u.id : (await supabaseClient.from('users').insert([{ nome, cognome, classe }]).select().single()).data.id;
+
+            // Controlla registrazioni esistenti nello stesso turno
+            const { data: existing } = await supabaseClient.from('registrations')
+                .select('id,event_id')
+                .eq('user_id', userId)
+                .eq('turn', selectedEvent.turn)
+                .eq('event_date', selectedEvent.date)
                 .maybeSingle();
 
-            let userId;
-
-            if (u) userId = u.id;
-            else {
-                const { data } = await supabaseClient
-                    .from('users')
-                    .insert([{ nome, cognome, classe }])
-                    .select()
-                    .single();
-
-                userId = data.id;
-            }
-
-            const { error } = await supabaseClient
-                .from('registrations')
-                .insert([{
-                    user_id: userId,
-                    event_id: selectedEvent.id,
-                    event_date: selectedEvent.date,
-                    turn: selectedEvent.turn
-                }])
-                ;
-
-            if (error) {
-                if (error.code === '23505') {
-                    statusBox.textContent = 'Sei già iscritto in questo turno';
-                } else {
-                    statusBox.textContent = 'Errore registrazione';
-                }
+            if (existing && existing.event_id === selectedEvent.id) {
+                statusBox.textContent = 'Sei già iscritto a questo corso';
                 submitBtn.disabled = false;
                 return;
             }
-            await supabaseClient
-                .from('events')
-                .update({
-                    remaining: selectedEvent.remaining - 1
-                })
-                .eq('id', selectedEvent.id);
 
+            if (existing) {
+                const oldEvent = events.find(e => e.id === existing.event_id);
+                openConfirmModal(oldEvent.title, selectedEvent.title, { userId, existingId: existing.id, oldEventId: oldEvent.id, newEventId: selectedEvent.id });
+                submitBtn.disabled = false;
+                return;
+            }
+
+            // Inserimento nuovo
+            const { error } = await supabaseClient.from('registrations').insert([{
+                user_id: userId,
+                event_id: selectedEvent.id,
+                event_date: selectedEvent.date,
+                turn: selectedEvent.turn
+            }]);
+
+            if (error) {
+                statusBox.textContent = 'Errore registrazione';
+                submitBtn.disabled = false;
+                return;
+            }
+
+            await supabaseClient.from('events').update({ remaining: selectedEvent.remaining - 1 }).eq('id', selectedEvent.id);
             statusBox.textContent = 'Iscrizione completata!';
             setTimeout(() => location.reload(), 1000);
-        };
+        }
+
+        // Sostituzione registrazione con update + gestione posti
+        async function replaceRegistration(confirm) {
+            if (!confirm || !pendingRegistration) { closeConfirmModal(); return; }
+
+            // Aggiorna la registrazione esistente
+            await supabaseClient.from('registrations')
+                .update({
+                    event_id: pendingRegistration.newEventId,
+                    event_date: selectedEvent.date,
+                    created_at: new Date().toISOString()
+                })
+                .eq('id', pendingRegistration.existingId);
+
+            // Aggiorna posti
+            await supabaseClient.from('events').update({ remaining: events.find(e => e.id === pendingRegistration.oldEventId).remaining + 1 }).eq('id', pendingRegistration.oldEventId);
+            await supabaseClient.from('events').update({ remaining: selectedEvent.remaining - 1 }).eq('id', selectedEvent.id);
+
+            statusBox.textContent = 'Iscrizione sostituita!';
+            closeConfirmModal();
+            closeModal();
+            setTimeout(() => location.reload(), 1000);
+        }
 
         loadEvents();
     </script>
-
 </body>
 </html>
