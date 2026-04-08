@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autogestione Fermi</title>
+
     <style>
         body {
             font-family: Arial;
@@ -65,35 +66,96 @@
             margin-top: 10px;
         }
 
+        /* MODAL MODERNO */
         .modal {
             display: none;
             position: fixed;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             background: rgba(0,0,0,0.5);
-            top: 0;
-            left: 0;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease;
         }
 
         .modal-content {
             background: white;
-            margin: 10% auto;
+            margin: auto;
             padding: 2rem;
+            width: 90%;
             max-width: 400px;
-            border-radius: 8px;
+            border-radius: 12px;
             position: relative;
+            top: 50%;
+            transform: translateY(-50%) scale(0.95);
+            animation: popIn 0.2s ease forwards;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
+
+            .modal-content h3 {
+                margin-bottom: 1rem;
+                text-align: center;
+            }
+
+        #registration-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+            #registration-form input,
+            #registration-form select {
+                padding: 10px;
+                border-radius: 6px;
+                border: 1px solid #ccc;
+                font-size: 14px;
+                transition: 0.2s;
+            }
+
+                #registration-form input:focus,
+                #registration-form select:focus {
+                    border-color: #4CAF50;
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
+                }
+
+            #registration-form button {
+                margin-top: 10px;
+                padding: 10px;
+                border-radius: 6px;
+                font-weight: bold;
+                transition: 0.2s;
+            }
+
+                #registration-form button:disabled {
+                    background: #ccc;
+                    cursor: not-allowed;
+                }
 
         .close {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 12px;
+            right: 15px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 18px;
+            font-size: 20px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes popIn {
+            to {
+                transform: translateY(-50%) scale(1);
+            }
         }
     </style>
 </head>
+
 <body>
 
     <header><h1>Autogestione Fermi</h1></header>
@@ -104,22 +166,37 @@
         <div id="modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal()">&times;</span>
-                <h3>Inserisci dati</h3>
+                <h3 id="modal-title">Inserisci dati</h3>
+
                 <form id="registration-form">
                     <input id="nome" placeholder="Nome" required>
                     <input id="cognome" placeholder="Cognome" required>
-                    <input id="classe" placeholder="Classe" required>
-                    <button type="submit">Iscriviti</button>
+
+                    <select id="classe" required>
+                        <option value="">Seleziona classe</option>
+                        <option>1A</option>
+                        <option>1B</option>
+                        <option>2A</option>
+                        <option>2B</option>
+                        <option>3A</option>
+                        <option>3B</option>
+                        <option>4A</option>
+                        <option>4B</option>
+                        <option>5A</option>
+                        <option>5B</option>
+                    </select>
+
+                    <button type="submit" disabled>Iscriviti</button>
                 </form>
+
                 <div id="modal-status" class="status"></div>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script>
-        console.log("Script caricato");
 
+    <script>
         const supabaseClient = window.supabase.createClient(
             'https://oshlsztqzlxikdrmhkde.supabase.co',
             'sb_publishable_KhG9adzEibpiORc73NGFdA_Rl8Iqju4'
@@ -127,28 +204,30 @@
 
         let events = [];
         let selectedEvent = null;
+
         const modal = document.getElementById('modal');
         const form = document.getElementById('registration-form');
         const statusBox = document.getElementById('modal-status');
 
-        function debug(msg, obj = null) {
-            console.log(msg, obj || '');
+        const inputs = form.querySelectorAll('input, select');
+        const submitBtn = form.querySelector('button');
+
+        inputs.forEach(i => {
+            i.addEventListener('input', checkForm);
+        });
+
+        function checkForm() {
+            const allFilled = [...inputs].every(i => i.value.trim() !== '');
+            submitBtn.disabled = !allFilled;
         }
 
-        // Carica eventi da Supabase
         async function loadEvents() {
-            const { data, error } = await supabaseClient
+            const { data } = await supabaseClient
                 .from('events')
                 .select('*')
-                .order('date', { ascending: true });
-
-            if (error) {
-                debug("Errore caricamento eventi", error);
-                return;
-            }
+                .order('date');
 
             events = data;
-            debug("Eventi caricati", events);
             renderEvents();
         }
 
@@ -157,6 +236,7 @@
             container.innerHTML = '';
 
             const grouped = {};
+
             events.forEach(e => {
                 if (!grouped[e.date]) grouped[e.date] = { primo: [], secondo: [] };
                 grouped[e.date][e.turn].push(e);
@@ -164,24 +244,35 @@
 
             Object.keys(grouped).forEach(date => {
                 const div = document.createElement('div');
-                div.innerHTML = `<h2>${date}</h2>`;
+                const formattedDate = new Date(date).toLocaleDateString('it-IT', {
+                    day: 'numeric',
+                    month: 'long'
+                });
+
+                div.innerHTML = `<h2>${formattedDate}</h2>`;
 
                 ['primo', 'secondo'].forEach(turn => {
                     if (grouped[date][turn].length) {
                         const sec = document.createElement('div');
                         sec.className = 'turn-section ' + (turn === 'primo' ? 'turn-primo' : 'turn-secondo');
-                        sec.innerHTML = `<h3>${turn}</h3>`;
+                        sec.innerHTML = `<h3>${turn} turno</h3>`;
 
                         grouped[date][turn].forEach(e => {
                             const el = document.createElement('div');
                             el.className = 'event';
                             el.innerHTML = `
-                            <div>
-                                <strong>${e.title}</strong><br>
-                                <small>${e.description || ''}</small>
-                            </div>
-                            <button onclick="openModal(${e.id})">Iscriviti</button>
-                            `;
+                                <div>
+                                    <strong>${e.title}</strong><br>
+                                    <small>${e.description || ''}</small><br>
+                                    <small style="color:${e.remaining > 0 ? 'green' : 'red'}">
+                                        Posti rimasti: ${e.remaining}
+                                    </small>
+                                </div>
+                                <button
+                                    onclick="openModal(${e.id})" 
+                                    ${e.remaining <= 0 ? 'disabled' : ''}>
+                                    ${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}
+                                </button>`;
                             sec.appendChild(el);
                         });
 
@@ -191,13 +282,12 @@
 
                 container.appendChild(div);
             });
-
-            debug("Eventi renderizzati");
         }
 
         function openModal(id) {
             selectedEvent = events.find(e => e.id === id);
-            debug("Modal aperto per evento", selectedEvent);
+            const title = document.getElementById('modal-title');
+            title.textContent = `${selectedEvent.title} - ${selectedEvent.turn} turno`;
             statusBox.textContent = '';
             modal.style.display = 'block';
         }
@@ -209,23 +299,18 @@
         window.onclick = function (event) {
             if (event.target == modal) closeModal();
         }
+
         window.openModal = openModal;
 
         form.onsubmit = async function (e) {
             e.preventDefault();
-            const btn = form.querySelector('button');
-            btn.disabled = true;
-            statusBox.textContent = '';
+            submitBtn.disabled = true;
 
             const nome = document.getElementById('nome').value.trim().toLowerCase();
             const cognome = document.getElementById('cognome').value.trim().toLowerCase();
             const classe = document.getElementById('classe').value.trim().toLowerCase();
 
-            debug("Submit form", { nome, cognome, classe, evento: selectedEvent });
-
-            // 1. Trova o crea utente
-            let userId;
-            const { data: u, error: userErr } = await supabaseClient
+            let { data: u } = await supabaseClient
                 .from('users')
                 .select('*')
                 .eq('nome', nome)
@@ -233,54 +318,46 @@
                 .eq('classe', classe)
                 .maybeSingle();
 
-            if (userErr) {
-                statusBox.textContent = 'Errore utente';
-                debug("Errore utente", userErr);
-                btn.disabled = false;
-                return;
-            }
+            let userId;
 
             if (u) userId = u.id;
             else {
-                const { data: newU, error: insertErr } = await supabaseClient
+                const { data } = await supabaseClient
                     .from('users')
                     .insert([{ nome, cognome, classe }])
                     .select()
                     .single();
 
-                if (insertErr) {
-                    statusBox.textContent = 'Errore creazione utente';
-                    debug("Errore inserimento utente", insertErr);
-                    btn.disabled = false;
-                    return;
-                }
-                userId = newU.id;
+                userId = data.id;
             }
 
-            // 2. Prova a inserire la registrazione
-            const { error: insertRegErr } = await supabaseClient
+            const { error } = await supabaseClient
                 .from('registrations')
                 .insert([{
                     user_id: userId,
                     event_id: selectedEvent.id,
                     event_date: selectedEvent.date,
                     turn: selectedEvent.turn
-                }]);
+                }])
+                ;
 
-            if (insertRegErr) {
-                // 23505 = violation della unique constraint
-                if (insertRegErr.code === '23505') {
-                    statusBox.textContent = 'Errore: sei già iscritto a un evento in questo turno';
+            if (error) {
+                if (error.code === '23505') {
+                    statusBox.textContent = 'Sei già iscritto in questo turno';
                 } else {
                     statusBox.textContent = 'Errore registrazione';
                 }
-                debug("Errore registrazione", insertRegErr);
-                btn.disabled = false;
+                submitBtn.disabled = false;
                 return;
             }
+            await supabaseClient
+                .from('events')
+                .update({
+                    remaining: selectedEvent.remaining - 1
+                })
+                .eq('id', selectedEvent.id);
 
             statusBox.textContent = 'Iscrizione completata!';
-            debug("Registrazione completata", { userId, eventId: selectedEvent.id });
             setTimeout(() => location.reload(), 1000);
         };
 
