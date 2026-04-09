@@ -37,14 +37,8 @@
             background: #4CAF50;
             color: white;
             border: none;
-            padding: 0 1rem;
+            padding: 0.5rem 1rem;
             cursor: pointer;
-            height: 40px; /* altezza fissa */
-            min-width: 90px; /* larghezza minima uniforme */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
         }
 
             button:disabled {
@@ -134,12 +128,10 @@
 
         .close {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            padding: 8px; /* area clic più grande */
-            line-height: 1;
+            top: 12px;
+            right: 15px;
             cursor: pointer;
+            font-size: 20px;
         }
 
         @keyframes fadeIn {
@@ -155,23 +147,6 @@
         @keyframes popIn {
             to {
                 transform: translateY(-50%) scale(1);
-            }
-        }
-        @media (max-width: 600px) {
-            .modal-content {
-                width: 95%;
-                padding: 1.5rem;
-            }
-
-            .close {
-                top: 8px;
-                right: 8px;
-                padding: 10px; /* ancora più facile da cliccare */
-            }
-
-            button {
-                height: 44px; /* standard mobile */
-                font-size: 15px;
             }
         }
     </style>
