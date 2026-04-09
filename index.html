@@ -157,6 +157,23 @@
                 transform: translateY(-50%) scale(1);
             }
         }
+        @media (max-width: 600px) {
+            .modal-content {
+                width: 95%;
+                padding: 1.5rem;
+            }
+
+            .close {
+                top: 8px;
+                right: 8px;
+                padding: 10px; /* ancora più facile da cliccare */
+            }
+
+            button {
+                height: 44px; /* standard mobile */
+                font-size: 15px;
+            }
+        }
     </style>
 </head>
 <body>
