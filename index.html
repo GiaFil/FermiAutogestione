@@ -168,15 +168,39 @@
                     <select id="classe" required>
                         <option value="">Seleziona classe</option>
                         <option>1A</option>
+                        <option>1ASA</option>
                         <option>1B</option>
+                        <option>1BSA</option>
+                        <option>1C</option>
+                        <option>1CSA</option>
+                        <option>1D</option>
                         <option>2A</option>
+                        <option>2ASA</option>
                         <option>2B</option>
+                        <option>2BSA</option>
+                        <option>2C</option>
+                        <option>2CSA</option>
                         <option>3A</option>
+                        <option>3ASA</option>
                         <option>3B</option>
+                        <option>3BSA</option>
+                        <option>3C</option>
+                        <option>3D</option>
+                        <option>3E</option>
                         <option>4A</option>
+                        <option>4ASA</option>
                         <option>4B</option>
+                        <option>4BSA</option>
+                        <option>4C</option>
+                        <option>4D</option>
+                        <option>4E</option>
                         <option>5A</option>
+                        <option>5ASA</option>
                         <option>5B</option>
+                        <option>5BSA</option>
+                        <option>5C</option>
+                        <option>5D</option>
+                        <option>5E</option>
                     </select>
                     <button type="submit" disabled>Iscriviti</button>
                 </form>
@@ -215,6 +239,18 @@
         const inputs = form.querySelectorAll('input, select');
         const submitBtn = form.querySelector('button');
 
+        window.addEventListener('DOMContentLoaded', () => {
+            const nome = localStorage.getItem('nome');
+            const cognome = localStorage.getItem('cognome');
+            const classe = localStorage.getItem('classe');
+
+            if (nome) document.getElementById('nome').value = nome;
+            if (cognome) document.getElementById('cognome').value = cognome;
+            if (classe) document.getElementById('classe').value = classe;
+
+            checkForm(); // aggiorna stato bottone
+        });
+
         inputs.forEach(i => i.addEventListener('input', checkForm));
         function checkForm() { submitBtn.disabled = ![...inputs].every(i => i.value.trim() !== ''); }
 
@@ -243,11 +279,11 @@
                             const el = document.createElement('div');
                             el.className = 'event';
                             el.innerHTML = `<div>
-                            <strong>${e.title}</strong><br>
-                            <small>${e.description || ''}</small><br>
-                            <small style="color:${e.remaining > 0 ? 'green' : 'red'}">Posti rimasti: ${e.remaining}</small>
-                        </div>
-                        <button onclick="openModal(${e.id})" ${e.remaining <= 0 ? 'disabled' : ''}>${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}</button>`;
+                                <strong>${e.title}</strong><br>
+                                <small>${e.description || ''}</small><br>
+                                <small style="color:${e.remaining > 0 ? 'green' : 'red'}">Posti rimasti: ${e.remaining}</small>
+                            </div>
+                            <button onclick="openModal(${e.id})" ${e.remaining <= 0 ? 'disabled' : ''}>${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}</button>`;
                             sec.appendChild(el);
                         });
                         div.appendChild(sec);
@@ -261,7 +297,16 @@
             selectedEvent = events.find(e => e.id === id);
             document.getElementById('modal-title').textContent = `${selectedEvent.title} - ${selectedEvent.turn} turno`;
             statusBox.textContent = '';
+
+            document.getElementById('nome').value = localStorage.getItem('nome') || '';
+            document.getElementById('cognome').value = localStorage.getItem('cognome') || '';
+            document.getElementById('classe').value = localStorage.getItem('classe') || '';
+
+            checkForm();
+
             modal.style.display = 'block';
+
+
         }
         function closeModal() { modal.style.display = 'none'; }
 
@@ -285,9 +330,18 @@
 
             const nome = document.getElementById('nome').value.trim().toLowerCase();
             const cognome = document.getElementById('cognome').value.trim().toLowerCase();
-            const classe = document.getElementById('classe').value.trim().toLowerCase();
+            const classe = document.getElementById('classe').value.trim();
 
-            let { data: u } = await supabaseClient.from('users').select('*').eq('nome', nome).eq('cognome', cognome).eq('classe', classe).maybeSingle();
+            localStorage.setItem('nome', nome);
+            localStorage.setItem('cognome', cognome);
+            localStorage.setItem('classe', classe);
+
+            let { data: u } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('nome', nome)
+                .eq('cognome', cognome)
+                .eq('classe', classe).maybeSingle();
             let userId = u ? u.id : (await supabaseClient.from('users').insert([{ nome, cognome, classe }]).select().single()).data.id;
 
             // Controlla registrazioni esistenti nello stesso turno
