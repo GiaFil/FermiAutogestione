@@ -1,1 +1,1 @@
-https://giafil.github.io/FermiAutogestione/
+https://fermi-autogestione.vercel.app
