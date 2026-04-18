@@ -42,7 +42,6 @@
                 background-color: #45a049;
             }
 
-        /* EVENT CARD */
         .event-item {
             margin: 1rem 0;
             padding: 1rem;
@@ -62,7 +61,6 @@
                 flex: 1;
             }
 
-        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -91,7 +89,6 @@
             font-size: 22px;
         }
 
-        /* TABELLA */
         .registrations-table {
             width: 100%;
             border-collapse: collapse;
@@ -140,7 +137,6 @@
         <div id="events-list"></div>
     </div>
 
-    <!-- MODAL -->
     <div id="event-modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="hideEventForm()">&times;</span>
@@ -234,19 +230,19 @@
                 div.className = 'event-item';
 
                 div.innerHTML = `
-                <strong>${e.title}</strong><br>
-                ${e.date} - ${e.turn}<br>
-                ${e.remaining}/${e.max_seats} posti
+                    <strong>${e.title}</strong><br>
+                    ${e.date} - ${e.turn}<br>
+                    ${e.remaining}/${e.max_seats} posti
 
-                <div class="event-actions">
-                    <button onclick='showEditEventForm(${JSON.stringify(e)})'>Modifica</button>
-                    <button onclick='deleteEvent(${e.id})'>Elimina</button>
-                    <button onclick='toggleRegistrations(${e.id})'>Iscritti</button>
-                    <button onclick='downloadRegistrations(${e.id}, "${e.title}")'>Scarica</button>
-                </div>
+                    <div class="event-actions">
+                        <button onclick='showEditEventForm(${JSON.stringify(e)})'>Modifica</button>
+                        <button onclick='deleteEvent(${e.id})'>Elimina</button>
+                        <button onclick='toggleRegistrations(${e.id})'>Iscritti</button>
+                        <button onclick='downloadRegistrations(${e.id}, "${e.title}")'>Scarica</button>
+                    </div>
 
-                <div id="registrations-${e.id}"></div>
-            `;
+                    <div id="registrations-${e.id}"></div>
+                `;
 
                 container.appendChild(div);
             });
@@ -300,28 +296,28 @@
             }
 
             let html = `
-            <table class="registrations-table">
-                <tr>
-                    <th>Nome</th>
-                    <th>Cognome</th>
-                    <th>Classe</th>
-                    <th>Azioni</th>
-                </tr>
-        `;
+                <table class="registrations-table">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Cognome</th>
+                        <th>Classe</th>
+                        <th>Azioni</th>
+                    </tr>
+            `;
 
             data.forEach(r => {
                 html += `
-                <tr>
-                    <td>${r.users.nome}</td>
-                    <td>${r.users.cognome}</td>
-                    <td>${r.users.classe}</td>
-                    <td>
-                        <button class="delete-btn" onclick="deleteRegistration(${r.id}, ${id})">
-                            Elimina
-                        </button>
-                    </td>
-                </tr>
-            `;
+                    <tr>
+                        <td>${r.users.nome}</td>
+                        <td>${r.users.cognome}</td>
+                        <td>${r.users.classe}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteRegistration(${r.id}, ${id})">
+                                Elimina
+                            </button>
+                        </td>
+                    </tr>
+                `;
             });
 
             html += `</table>`;
