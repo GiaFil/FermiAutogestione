@@ -157,7 +157,6 @@
     <div class="container">
         <div id="event-list"></div>
 
-        <!-- Modal Registrazione -->
         <div id="modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal()">&times;</span>
@@ -208,7 +207,6 @@
             </div>
         </div>
 
-        <!-- Modal Conferma Sostituzione -->
         <div id="confirm-modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeConfirmModal()">&times;</span>
@@ -248,7 +246,7 @@
             if (cognome) document.getElementById('cognome').value = cognome;
             if (classe) document.getElementById('classe').value = classe;
 
-            checkForm(); // aggiorna stato bottone
+            checkForm();
         });
 
         inputs.forEach(i => i.addEventListener('input', checkForm));
@@ -279,11 +277,11 @@
                             const el = document.createElement('div');
                             el.className = 'event';
                             el.innerHTML = `<div>
-                                <strong>${e.title}</strong><br>
-                                <small>${e.description || ''}</small><br>
-                                <small style="color:${e.remaining > 0 ? 'green' : 'red'}">Posti rimasti: ${e.remaining}</small>
-                            </div>
-                            <button onclick="openModal(${e.id})" ${e.remaining <= 0 ? 'disabled' : ''}>${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}</button>`;
+                                    <strong>${e.title}</strong><br>
+                                    <small>${e.description || ''}</small><br>
+                                    <small style="color:${e.remaining > 0 ? 'green' : 'red'}">Posti rimasti: ${e.remaining}</small>
+                                </div>
+                                <button onclick="openModal(${e.id})" ${e.remaining <= 0 ? 'disabled' : ''}>${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}</button>`;
                             sec.appendChild(el);
                         });
                         div.appendChild(sec);
@@ -305,8 +303,6 @@
             checkForm();
 
             modal.style.display = 'block';
-
-
         }
         function closeModal() { modal.style.display = 'none'; }
 
@@ -344,7 +340,6 @@
                 .eq('classe', classe).maybeSingle();
             let userId = u ? u.id : (await supabaseClient.from('users').insert([{ nome, cognome, classe }]).select().single()).data.id;
 
-            // Controlla registrazioni esistenti nello stesso turno
             const { data: existing } = await supabaseClient.from('registrations')
                 .select('id,event_id')
                 .eq('user_id', userId)
@@ -365,7 +360,6 @@
                 return;
             }
 
-            // Inserimento nuovo
             const { error } = await supabaseClient.from('registrations').insert([{
                 user_id: userId,
                 event_id: selectedEvent.id,
@@ -384,11 +378,9 @@
             setTimeout(() => location.reload(), 1000);
         }
 
-        // Sostituzione registrazione con update + gestione posti
         async function replaceRegistration(confirm) {
             if (!confirm || !pendingRegistration) { closeConfirmModal(); return; }
 
-            // Aggiorna la registrazione esistente
             await supabaseClient.from('registrations')
                 .update({
                     event_id: pendingRegistration.newEventId,
@@ -397,7 +389,6 @@
                 })
                 .eq('id', pendingRegistration.existingId);
 
-            // Aggiorna posti
             await supabaseClient.from('events').update({ remaining: events.find(e => e.id === pendingRegistration.oldEventId).remaining + 1 }).eq('id', pendingRegistration.oldEventId);
             await supabaseClient.from('events').update({ remaining: selectedEvent.remaining - 1 }).eq('id', selectedEvent.id);
 
