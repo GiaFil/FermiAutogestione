@@ -39,6 +39,14 @@
             border: none;
             padding: 0.5rem 1rem;
             cursor: pointer;
+            height: 40px;
+            align-self: center;
+        }
+        @media (max-width: 600px) {
+            button {
+                height: 48px;
+                font-size: 16px;
+            }
         }
 
             button:disabled {
@@ -277,10 +285,14 @@
                             const el = document.createElement('div');
                             el.className = 'event';
                             el.innerHTML = `<div>
-                                    <strong>${e.title}</strong><br>
-                                    <small>${e.description || ''}</small><br>
-                                    <small style="color:${e.remaining > 0 ? 'green' : 'red'}">Posti rimasti: ${e.remaining}</small>
-                                </div>
+                                <strong>${e.title}</strong><br>
+                                <small>${e.description || ''}</small><br>
+                                <small>Docente: ${e.teacher || 'N/D'}</small><br>
+                                <small>Aula/Classe: ${e.room || 'N/D'}</small><br>
+                                <small style="color:${e.remaining > 0 ? 'green' : 'red'}">
+                                    Posti rimasti: ${e.remaining}
+                                </small>
+                            </div>
                                 <button onclick="openModal(${e.id})" ${e.remaining <= 0 ? 'disabled' : ''}>${e.remaining <= 0 ? 'Pieno' : 'Iscriviti'}</button>`;
                             sec.appendChild(el);
                         });
