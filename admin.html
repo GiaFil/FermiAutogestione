@@ -147,6 +147,8 @@
                 <input type="hidden" id="event-id">
                 <input type="text" id="event-title" placeholder="Titolo evento" required>
                 <input type="number" id="event-max-seats" placeholder="Posti" required>
+                <input type="text" id="event-teacher" placeholder="Docente" required>
+                <input type="text" id="event-room" placeholder="Aula / Classe" required>
                 <textarea id="event-description"></textarea>
 
                 <select id="event-date">
@@ -198,6 +200,8 @@
         function showAddEventForm() {
             document.getElementById('event-form').reset();
             document.getElementById('event-id').value = '';
+            document.getElementById('event-teacher').value = '';
+            document.getElementById('event-room').value = '';
             eventModal.style.display = 'block';
         }
 
@@ -208,6 +212,9 @@
             document.getElementById('event-description').value = event.description;
             document.getElementById('event-date').value = event.date;
             document.getElementById('event-turn').value = event.turn;
+            document.getElementById('event-teacher').value = event.teacher;
+            document.getElementById('event-room').value = event.room;
+
             eventModal.style.display = 'block';
         }
 
@@ -230,19 +237,19 @@
                 div.className = 'event-item';
 
                 div.innerHTML = `
-                    <strong>${e.title}</strong><br>
-                    ${e.date} - ${e.turn}<br>
-                    ${e.remaining}/${e.max_seats} posti
+                        <strong>${e.title}</strong><br>
+                        ${e.date} - ${e.turn}<br>
+                        ${e.remaining}/${e.max_seats} posti
 
-                    <div class="event-actions">
-                        <button onclick='showEditEventForm(${JSON.stringify(e)})'>Modifica</button>
-                        <button onclick='deleteEvent(${e.id})'>Elimina</button>
-                        <button onclick='toggleRegistrations(${e.id})'>Iscritti</button>
-                        <button onclick='downloadRegistrations(${e.id}, "${e.title}")'>Scarica</button>
-                    </div>
+                        <div class="event-actions">
+                            <button onclick='showEditEventForm(${JSON.stringify(e)})'>Modifica</button>
+                            <button onclick='deleteEvent(${e.id})'>Elimina</button>
+                            <button onclick='toggleRegistrations(${e.id})'>Iscritti</button>
+                            <button onclick='downloadRegistrations(${e.id}, "${e.title}")'>Scarica</button>
+                        </div>
 
-                    <div id="registrations-${e.id}"></div>
-                `;
+                        <div id="registrations-${e.id}"></div>
+                    `;
 
                 container.appendChild(div);
             });
@@ -259,10 +266,13 @@
                 remaining: parseInt(document.getElementById('event-max-seats').value),
                 description: document.getElementById('event-description').value,
                 date: document.getElementById('event-date').value,
-                turn: document.getElementById('event-turn').value
+                turn: document.getElementById('event-turn').value,
+                teacher: document.getElementById('event-teacher').value,
+                room: document.getElementById('event-room').value
             };
 
             if (id) {
+                delete data.remaining; // NON resettare posti
                 await supabaseClient.from('events').update(data).eq('id', id);
             } else {
                 await supabaseClient.from('events').insert([data]);
@@ -296,28 +306,28 @@
             }
 
             let html = `
-                <table class="registrations-table">
-                    <tr>
-                        <th>Nome</th>
-                        <th>Cognome</th>
-                        <th>Classe</th>
-                        <th>Azioni</th>
-                    </tr>
-            `;
+                    <table class="registrations-table">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Cognome</th>
+                            <th>Classe</th>
+                            <th>Azioni</th>
+                        </tr>
+                `;
 
             data.forEach(r => {
                 html += `
-                    <tr>
-                        <td>${r.users.nome}</td>
-                        <td>${r.users.cognome}</td>
-                        <td>${r.users.classe}</td>
-                        <td>
-                            <button class="delete-btn" onclick="deleteRegistration(${r.id}, ${id})">
-                                Elimina
-                            </button>
-                        </td>
-                    </tr>
-                `;
+                        <tr>
+                            <td>${r.users.nome}</td>
+                            <td>${r.users.cognome}</td>
+                            <td>${r.users.classe}</td>
+                            <td>
+                                <button class="delete-btn" onclick="deleteRegistration(${r.id}, ${id})">
+                                    Elimina
+                                </button>
+                            </td>
+                        </tr>
+                    `;
             });
 
             html += `</table>`;
