@@ -238,8 +238,11 @@
 
                 div.innerHTML = `
                         <strong>${e.title}</strong><br>
-                        ${e.date} - ${e.turn}<br>
-                        ${e.remaining}/${e.max_seats} posti
+                        ${new Date(e.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })} - ${e.turn} turno
+                        ${e.remaining}/${e.max_seats} posti <br>
+                        docente: ${e.teacher} <br>
+                        aula: ${e.room} <br>
+                        ${e.description ? `<em>${e.description}</em><br>` : ''}
 
                         <div class="event-actions">
                             <button onclick='showEditEventForm(${JSON.stringify(e)})'>Modifica</button>
