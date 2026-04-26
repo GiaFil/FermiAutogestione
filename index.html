@@ -287,7 +287,7 @@
                             el.innerHTML = `<div>
                                 <strong>${e.title}</strong><br>
                                 <small>${e.description || ''}</small><br>
-                                <small>Studenti che tengono il corso: ${e.teacher || 'N/D'}</small><br>
+                                <small>Docente: ${e.teacher || 'N/D'}</small><br>
                                 <small>Aula/Classe: ${e.room || 'N/D'}</small><br>
                                 <small style="color:${e.remaining > 0 ? 'green' : 'red'}">
                                     Posti rimasti: ${e.remaining}
@@ -372,15 +372,14 @@
                 return;
             }
 
-            const { error } = await supabaseClient.from('registrations').insert([{
-                user_id: userId,
-                event_id: selectedEvent.id,
-                event_date: selectedEvent.date,
-                turn: selectedEvent.turn
-            }]);
+            const { error } = await supabaseClient.rpc('register_user', {
+                p_event_id: selectedEvent.id,
+                p_user_id: userId
+            });
+
 
             if (error) {
-                statusBox.textContent = 'Errore registrazione';
+                statusBox.textContent = error.message;
                 submitBtn.disabled = false;
                 return;
             }
@@ -393,16 +392,17 @@
         async function replaceRegistration(confirm) {
             if (!confirm || !pendingRegistration) { closeConfirmModal(); return; }
 
-            await supabaseClient.from('registrations')
-                .update({
-                    event_id: pendingRegistration.newEventId,
-                    event_date: selectedEvent.date,
-                    created_at: new Date().toISOString()
-                })
-                .eq('id', pendingRegistration.existingId);
+            const { error } = await supabaseClient.rpc('replace_registration', {
+                p_registration_id: pendingRegistration.existingId,
+                p_new_event_id: pendingRegistration.newEventId,
+                p_old_event_id: pendingRegistration.oldEventId
+            });
 
-            await supabaseClient.from('events').update({ remaining: events.find(e => e.id === pendingRegistration.oldEventId).remaining + 1 }).eq('id', pendingRegistration.oldEventId);
-            await supabaseClient.from('events').update({ remaining: selectedEvent.remaining - 1 }).eq('id', selectedEvent.id);
+            if (error) {
+                statusBox.textContent = error.message;
+                return;
+            }
+
 
             statusBox.textContent = 'Iscrizione sostituita!';
             closeConfirmModal();
